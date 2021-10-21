@@ -13,46 +13,38 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private Transform feet;
     [SerializeField] private LayerMask groundLayers;
     [SerializeField] private float airSpeed;
+    [SerializeField] private SpringJoint2D playerSpringJoint;
+    [SerializeField] private float scrollScale;
 
     private float userInput;
     private bool isGrounded;
     private bool isGrappled;
+    private bool toggleRopeEnd = false;
 
-    private float ropeLength;
+    private float ropeLength = float.MaxValue;
     private Vector3 grappleLocation, playerVelocity;
     private LineRenderer grapple;
 
     // Start is called before the first frame update
     void Start()
     {
+        playerSpringJoint.enabled = false;
         grapple = GetComponentInChildren<LineRenderer>();
     }
 
     // Update is called once per frame
     void Update()
     {
-
-        //this doesn't work because rope length is being continually updated - fix
-        if (grapple.GetComponent<Rope>().grappleEnded())
+        if (grapple.GetComponent<Rope>().StoppedGrapple())
         {
-            ropeLength = grapple.GetComponent<Rope>().ropeLength();
-            grappleLocation = grapple.GetComponent<Rope>().grappleLocation();
-
-            if (ropeLength < Mathf.Abs(transform.position.x - grappleLocation.x))
-            {
-                playerVelocity.x = -playerVelocity.x;
-            }
-
-            if (ropeLength < Mathf.Abs(transform.position.y - grappleLocation.y))
-            {
-                playerVelocity.y = -playerVelocity.y;
-            }
-
+            toggleRopeEnd = false;
+            isGrappled = false;
+            playerSpringJoint.enabled = false;
         }
 
         userInput = Input.GetAxisRaw("Horizontal");
 
-        if (Input.GetButtonDown("Jump") && IsGrounded())
+        if (Input.GetButtonDown("Jump") && IsGrounded() && !isGrappled)
         {
             Jump();
         }
@@ -65,11 +57,11 @@ public class PlayerController : MonoBehaviour
 
         if (IsGrounded())
         {
-            if (playerRigidBody.velocity.x > 0)
+            if (playerRigidBody.velocity.x > friction)
             {
                 xMovement = playerRigidBody.velocity.x + (userInput * acceleration) - friction;
             }
-            else if (playerRigidBody.velocity.x < 0)
+            else if (playerRigidBody.velocity.x < -friction)
             {
                 xMovement = playerRigidBody.velocity.x + (userInput * acceleration) + friction;
             }
@@ -78,6 +70,21 @@ public class PlayerController : MonoBehaviour
                 xMovement = userInput * acceleration;
             }
 
+        }
+        else if (isGrappled)
+        {
+            if (playerRigidBody.velocity.x > 0)
+            {
+                xMovement = playerRigidBody.velocity.x + (userInput * acceleration / 2);
+            }
+            else if (playerRigidBody.velocity.x < 0)
+            {
+                xMovement = playerRigidBody.velocity.x + (userInput * acceleration / 2);
+            }
+            else
+            {
+                xMovement = userInput * acceleration;
+            }
         }
         else
         {
@@ -100,9 +107,42 @@ public class PlayerController : MonoBehaviour
             xMovement = -walkSpeed;
         }
 
+        if (grapple.GetComponent<Rope>().GrappleEnded())
+        {
+            if (!toggleRopeEnd || IsGrounded())
+            {
+                ropeLength = grapple.GetComponent<Rope>().RopeLength();
+                grappleLocation = grapple.GetComponent<Rope>().GrappleLocation();
+                toggleRopeEnd = true;
+            }
+
+            if (Input.mouseScrollDelta.y != 0 && !IsGrounded())
+            {
+                ropeLength = ropeLength + (scrollScale * Input.mouseScrollDelta.y);
+            }
+
+            isGrappled = true;
+            playerSpringJoint.enabled = true;
+            playerSpringJoint.enableCollision = true;
+            playerSpringJoint.connectedAnchor = grappleLocation;
+            playerSpringJoint.distance = ropeLength;
+        }
+
+
         Vector2 movement = new Vector2(xMovement, playerRigidBody.velocity.y);
 
         playerRigidBody.velocity = movement;
+
+        //float playerRopeDif = Vector2.Distance(a: transform.position, b: grappleLocation);
+
+        //if (ropeLength < playerRopeDif)
+        //{
+
+        //    playerRigidBody.MovePosition(new Vector3(Mathf.MoveTowards(transform.position.x, grappleLocation.x, acceleration * Time.deltaTime), 
+        //        Mathf.MoveTowards(transform.position.y, grappleLocation.y, acceleration * Time.deltaTime), 0));
+        //
+        // }
+
     }
 
     private void Jump()
@@ -114,7 +154,7 @@ public class PlayerController : MonoBehaviour
 
     public bool IsGrounded()
     {
-        Collider2D groundCheck = Physics2D.OverlapCircle(feet.position, 0.4f, groundLayers);
+        Collider2D groundCheck = Physics2D.OverlapCircle(feet.position, 0.3f, groundLayers);
 
         if (groundCheck != null)
         {

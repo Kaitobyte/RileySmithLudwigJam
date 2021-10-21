@@ -17,12 +17,13 @@ public class Rope : MonoBehaviour
     [SerializeField] private Transform target;
 
     [SerializeField] private int resolution, waveCount, wobbleCount;
-    [SerializeField] private float waveSize, animSpeed, angle;
+    [SerializeField] private float waveSize, animSpeed, angle, maxLength;
 
     private LineRenderer line;
     private Coroutine grapple;
     private float length;
     private bool endOfRope;
+    private bool stoppedGrapple = true;
 
     // Start is called before the first frame update
     void Start()
@@ -35,13 +36,18 @@ public class Rope : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && stoppedGrapple == true)
         {
+            stoppedGrapple = false;
+            line.enabled = true;
             grapple = StartCoroutine(routine: AnimateRope(target.position));
         }
 
-        if (Input.GetMouseButtonDown(1))
+        if (Input.GetMouseButtonDown(1) || length > maxLength)
         {
+            line.enabled = false;
+            endOfRope = false;
+            stoppedGrapple = true;
             StopCoroutine(grapple);
         }
 
@@ -76,6 +82,8 @@ public class Rope : MonoBehaviour
             //also move the player and restrict player movement once rope is attacthed - being done in PlayerController
             //also add some grapple spam prevention - not done
         }
+
+        endOfRope = true;
 
         while (!Input.GetMouseButtonDown(1))
         {
@@ -119,8 +127,6 @@ public class Rope : MonoBehaviour
             Vector2 pos = RotatePoint(new Vector2(x: xPos + transform.position.x, y: yPos + transform.position.y), pivot: transform.position, angle);
             line.SetPosition(currentPoint, pos);
         }
-
-        endOfRope = true;
 
         //multiplying by a direction rotates the vector
         Vector2 RotatePoint(Vector2 point, Vector2 pivot, float angle1)
@@ -173,21 +179,26 @@ public class Rope : MonoBehaviour
     }
 
     //checks if the the grapple has fully reached the target
-    public bool grappleEnded()
+    public bool GrappleEnded()
     {
         return endOfRope;
     }
 
     //returns the length of the current rope
-    public float ropeLength()
+    public float RopeLength()
     {
         return length;
     }
 
     //returns the position that the end of the rope reached
-    public Vector3 grappleLocation()
+    public Vector3 GrappleLocation()
     {
         return target.position;
+    }
+
+    public bool StoppedGrapple()
+    {
+        return stoppedGrapple;
     }
 
 }
