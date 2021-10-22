@@ -154,7 +154,7 @@ public class PlayerController : MonoBehaviour
 
     public bool IsGrounded()
     {
-        Collider2D groundCheck = Physics2D.OverlapCircle(feet.position, 0.3f, groundLayers);
+        Collider2D groundCheck = Physics2D.OverlapCircle(feet.position, 0.35f, groundLayers);
 
         if (groundCheck != null)
         {

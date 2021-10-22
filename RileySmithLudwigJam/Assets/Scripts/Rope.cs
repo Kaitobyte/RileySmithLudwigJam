@@ -21,6 +21,7 @@ public class Rope : MonoBehaviour
 
     private LineRenderer line;
     private Coroutine grapple;
+    private PlayerController player;
     private float length;
     private bool endOfRope;
     private bool stoppedGrapple = true;
@@ -30,13 +31,14 @@ public class Rope : MonoBehaviour
     {
         endOfRope = false;
         line = GetComponentInChildren<LineRenderer>();
+        player = GetComponentInParent<PlayerController>();
 
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetMouseButtonDown(0) && stoppedGrapple == true)
+        if (Input.GetMouseButtonDown(0) && stoppedGrapple == true && !player.IsGrounded())
         {
             stoppedGrapple = false;
             line.enabled = true;
