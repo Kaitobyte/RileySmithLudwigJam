@@ -109,11 +109,16 @@ public class PlayerController : MonoBehaviour
 
         if (grapple.GetComponent<Rope>().GrappleEnded())
         {
-            if (!toggleRopeEnd || IsGrounded())
+            if (!toggleRopeEnd)
             {
                 ropeLength = grapple.GetComponent<Rope>().RopeLength();
                 grappleLocation = grapple.GetComponent<Rope>().GrappleLocation();
                 toggleRopeEnd = true;
+            }
+
+            if (IsGrounded())
+            {
+                grapple.GetComponent<Rope>().stopGrapple();
             }
 
             if (Input.mouseScrollDelta.y != 0 && !IsGrounded())
@@ -154,7 +159,7 @@ public class PlayerController : MonoBehaviour
 
     public bool IsGrounded()
     {
-        Collider2D groundCheck = Physics2D.OverlapCircle(feet.position, 0.35f, groundLayers);
+        Collider2D groundCheck = Physics2D.OverlapCircle(feet.position, 0.4f, groundLayers);
 
         if (groundCheck != null)
         {

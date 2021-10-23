@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 //Riley Smith 2021
 //I refrenced this tutorial when writing this code
@@ -18,6 +19,7 @@ public class Rope : MonoBehaviour
 
     [SerializeField] private int resolution, waveCount, wobbleCount;
     [SerializeField] private float waveSize, animSpeed, angle, maxLength;
+    [SerializeField] private LayerMask groundLayers;
 
     private LineRenderer line;
     private Coroutine grapple;
@@ -25,6 +27,8 @@ public class Rope : MonoBehaviour
     private float length;
     private bool endOfRope;
     private bool stoppedGrapple = true;
+    private Vector3 ropeEnd;
+    private bool emergencyStop;
 
     // Start is called before the first frame update
     void Start()
@@ -38,18 +42,20 @@ public class Rope : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetMouseButtonDown(0) && stoppedGrapple == true && !player.IsGrounded())
+        if (Input.GetMouseButtonDown(0) && stoppedGrapple && !player.IsGrounded())
         {
             stoppedGrapple = false;
             line.enabled = true;
+            setTarget();
             grapple = StartCoroutine(routine: AnimateRope(target.position));
         }
 
-        if (Input.GetMouseButtonDown(1) || length > maxLength)
+        if (Input.GetMouseButtonDown(1) || length > maxLength || emergencyStop)
         {
             line.enabled = false;
             endOfRope = false;
             stoppedGrapple = true;
+            emergencyStop = false;
             StopCoroutine(grapple);
         }
 
@@ -67,7 +73,7 @@ public class Rope : MonoBehaviour
         //percent goes from 0 to 1 over time as our grapple moves towards its target
         //sets our points over time so the rope actully moves towards its target
         float percent = 0;
-        while (percent <= 1f) 
+        while (percent <= 1f)
         {
             if (percent != 1f)
             {
@@ -105,10 +111,10 @@ public class Rope : MonoBehaviour
         //SetPoints(targetPos, 1, angle);
     }
 
-    private void SetPoints(Vector3 targetPos,  float percent, float angle)
+    private void SetPoints(Vector3 targetPos, float percent, float angle)
     {
         //figures out where the end of our rope is by checking the percent of the way we have moved bewteen to the two points
-        Vector3 ropeEnd = Vector3.Lerp(a: transform.position, b: targetPos, percent);
+        ropeEnd = Vector3.Lerp(a: transform.position, b: targetPos, percent);
 
         //gets the current length of the rope
         length = Vector2.Distance(a: transform.position, b: ropeEnd);
@@ -117,7 +123,7 @@ public class Rope : MonoBehaviour
         for (int currentPoint = 0; currentPoint < resolution; currentPoint++)
         {
             //gives us the position we are along the rope from 0 - 1
-            float xPos = (float) currentPoint / resolution * length;
+            float xPos = (float)currentPoint / resolution * length;
             float reversePercent = 1 - percent;
 
             //makes the rope move in a decreasing sin wave based on our wobbles and adjust the size of the waves
@@ -201,6 +207,76 @@ public class Rope : MonoBehaviour
     public bool StoppedGrapple()
     {
         return stoppedGrapple;
+    }
+
+
+    //to-do allow the use to choose any target by clicking, - done
+    //and detect if the rope has hit anything from where it starts
+    //until it gets to full length and stops
+    private void setTarget()
+    {
+        Vector2 screenPosition = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
+        Vector2 worldPosition = Camera.main.ScreenToWorldPoint(screenPosition);
+
+        target.position = worldPosition;
+
+        if (!Physics2D.OverlapCircle(target.position, 0.1f, groundLayers))
+        {
+            Vector2 temp = target.position;
+            temp.Scale(new Vector2(2, 2));
+
+            RaycastHit2D newTarget = Physics2D.Raycast(target.position, temp);
+            if (newTarget.collider == null)
+            {
+                line.enabled = false;
+                endOfRope = false;
+                stoppedGrapple = true;
+                StopCoroutine(grapple);
+            }
+
+            try
+            {
+                target.position = newTarget.collider.ClosestPoint(target.position);
+                if (target.position.x > player.transform.position.x)
+                {
+                    target.position = new Vector3(target.position.x + .2f, target.position.y, target.position.z);
+                } else if (target.position.x < player.transform.position.x)
+                {
+                    target.position = new Vector3(target.position.x - .2f, target.position.y, target.position.z);
+                }
+
+                if (target.position.y > player.transform.position.y)
+                {
+                    target.position = new Vector3(target.position.x, target.position.y + .2f, target.position.z);
+                }
+                else if (target.position.y < player.transform.position.y)
+                {
+                    target.position = new Vector3(target.position.x, target.position.y - .2f, target.position.z);
+                }
+
+            }
+            catch (NullReferenceException e)
+            {
+                line.enabled = false;
+                endOfRope = false;
+                stoppedGrapple = true;
+                StopCoroutine(grapple);
+                Console.WriteLine("Caught Null Exception");
+            }
+        }
+
+    }
+
+    private void grappleHitCheck()
+    {
+        if (Physics2D.OverlapCircle(ropeEnd, 0.1f, groundLayers)) {
+            target.position = ropeEnd;
+        }
+    }
+
+    public void stopGrapple()
+    {
+        emergencyStop = true;
     }
 
 }
