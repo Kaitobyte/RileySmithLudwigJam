@@ -75,11 +75,11 @@ public class PlayerController : MonoBehaviour
         {
             if (playerRigidBody.velocity.x > 0)
             {
-                xMovement = playerRigidBody.velocity.x + (userInput * acceleration / 2);
+                xMovement = playerRigidBody.velocity.x + (userInput * acceleration * 2);
             }
             else if (playerRigidBody.velocity.x < 0)
             {
-                xMovement = playerRigidBody.velocity.x + (userInput * acceleration / 2);
+                xMovement = playerRigidBody.velocity.x + (userInput * acceleration * 2);
             }
             else
             {
@@ -119,11 +119,6 @@ public class PlayerController : MonoBehaviour
             if (IsGrounded())
             {
                 grapple.GetComponent<Rope>().stopGrapple();
-            }
-
-            if (Input.mouseScrollDelta.y != 0 && !IsGrounded())
-            {
-                ropeLength = ropeLength + (scrollScale * Input.mouseScrollDelta.y);
             }
 
             isGrappled = true;

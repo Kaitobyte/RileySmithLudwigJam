@@ -45,14 +45,17 @@ public class Rope : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0) && stoppedGrapple && !player.IsGrounded())
         {
+            Debug.Log("Starting Grapple");
             stoppedGrapple = false;
             line.enabled = true;
             setTarget();
             grapple = StartCoroutine(routine: AnimateRope(target.position));
         }
 
-        if (Input.GetMouseButtonDown(1) || length > maxLength || emergencyStop)
+        if ((Input.GetMouseButtonDown(1) || length > maxLength || emergencyStop || player.transform.position.y >= ropeEnd.y) && !stoppedGrapple)
         {
+            Debug.Log("Ending Grapple");
+
             line.enabled = false;
             endOfRope = false;
             stoppedGrapple = true;
@@ -219,24 +222,24 @@ public class Rope : MonoBehaviour
     private void setTarget()
     {
         Vector2 distanceVector = Camera.main.ScreenToWorldPoint(Input.mousePosition) - transform.position;
-        Debug.Log(distanceVector.normalized + " distance vector");
         if (Physics2D.Raycast(transform.position, distanceVector.normalized))
         {
             RaycastHit2D _hit = Physics2D.Raycast(transform.position, distanceVector.normalized);
-            Debug.Log(_hit.transform.gameObject.layer + " does it equal " + groundLayers);
             if (_hit.transform.gameObject.layer == 8)
             {
-                if (Vector2.Distance(_hit.point, transform.position) <= maxLength)
-                {
-                    target.position = _hit.point;
-                }
-            } else
+                target.position = _hit.point;
+
+            }
+            else
             {
                 line.enabled = false;
                 endOfRope = false;
                 stoppedGrapple = true;
+                emergencyStop = false;
                 StopCoroutine(grapple);
             }
+
+
         }
 
 
