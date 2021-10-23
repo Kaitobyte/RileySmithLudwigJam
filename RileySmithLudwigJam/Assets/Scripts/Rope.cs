@@ -4,9 +4,10 @@ using UnityEngine;
 using System;
 
 //Riley Smith 2021
-//I refrenced this tutorial when writing this code
+//I refrenced these tutorials when writing this code
 //https://www.youtube.com/watch?v=tPtKNvifpj0
-//If you are looking for a base grappling hook you should check out the tutorial
+//https://www.youtube.com/watch?v=dnNCVcVS6uw&t=510s
+//If you are looking for a base grappling hook you should check out the tutorials
 //as this is a heavily modified version suited to this project specifically.
 //The function of this code is to create a grappling hook that the player can fire to
 //navigate the environment. I still have some adjustments to make so that it is more adaptible.
@@ -213,63 +214,38 @@ public class Rope : MonoBehaviour
     //to-do allow the use to choose any target by clicking, - done
     //and detect if the rope has hit anything from where it starts
     //until it gets to full length and stops
+
+    //try using LookAt also the rope does the side glitch on edges because you told it to.
     private void setTarget()
     {
-        Vector2 screenPosition = new Vector2(Input.mousePosition.x, Input.mousePosition.y);
-        Vector2 worldPosition = Camera.main.ScreenToWorldPoint(screenPosition);
-
-        target.position = worldPosition;
-
-        if (!Physics2D.OverlapCircle(target.position, 0.1f, groundLayers))
+        Vector2 distanceVector = Camera.main.ScreenToWorldPoint(Input.mousePosition) - transform.position;
+        Debug.Log(distanceVector.normalized + " distance vector");
+        if (Physics2D.Raycast(transform.position, distanceVector.normalized))
         {
-            Vector2 temp = target.position;
-            temp.Scale(new Vector2(2, 2));
-
-            RaycastHit2D newTarget = Physics2D.Raycast(target.position, temp);
-            if (newTarget.collider == null)
+            RaycastHit2D _hit = Physics2D.Raycast(transform.position, distanceVector.normalized);
+            Debug.Log(_hit.transform.gameObject.layer + " does it equal " + groundLayers);
+            if (_hit.transform.gameObject.layer == 8)
+            {
+                if (Vector2.Distance(_hit.point, transform.position) <= maxLength)
+                {
+                    target.position = _hit.point;
+                }
+            } else
             {
                 line.enabled = false;
                 endOfRope = false;
                 stoppedGrapple = true;
                 StopCoroutine(grapple);
-            }
-
-            try
-            {
-                target.position = newTarget.collider.ClosestPoint(target.position);
-                if (target.position.x > player.transform.position.x)
-                {
-                    target.position = new Vector3(target.position.x + .2f, target.position.y, target.position.z);
-                } else if (target.position.x < player.transform.position.x)
-                {
-                    target.position = new Vector3(target.position.x - .2f, target.position.y, target.position.z);
-                }
-
-                if (target.position.y > player.transform.position.y)
-                {
-                    target.position = new Vector3(target.position.x, target.position.y + .2f, target.position.z);
-                }
-                else if (target.position.y < player.transform.position.y)
-                {
-                    target.position = new Vector3(target.position.x, target.position.y - .2f, target.position.z);
-                }
-
-            }
-            catch (NullReferenceException e)
-            {
-                line.enabled = false;
-                endOfRope = false;
-                stoppedGrapple = true;
-                StopCoroutine(grapple);
-                Console.WriteLine("Caught Null Exception");
             }
         }
+
 
     }
 
     private void grappleHitCheck()
     {
-        if (Physics2D.OverlapCircle(ropeEnd, 0.1f, groundLayers)) {
+        if (Physics2D.OverlapCircle(ropeEnd, 0.1f, groundLayers))
+        {
             target.position = ropeEnd;
         }
     }
