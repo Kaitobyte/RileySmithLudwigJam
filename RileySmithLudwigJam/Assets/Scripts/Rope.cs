@@ -25,31 +25,51 @@ public class Rope : MonoBehaviour
     private LineRenderer line;
     private Coroutine grapple;
     private PlayerController player;
+    private Animator playerAnimator;
     private float length;
     private bool endOfRope;
     private bool stoppedGrapple = true;
     private Vector3 ropeEnd;
     private bool emergencyStop;
+    private bool grappleStart;
+    private float timer;
 
     // Start is called before the first frame update
     void Start()
     {
         endOfRope = false;
+        emergencyStop = false;
         line = GetComponentInChildren<LineRenderer>();
         player = GetComponentInParent<PlayerController>();
-
+        playerAnimator = player.GetComponentInParent<Animator>();
     }
 
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetMouseButtonDown(0) && stoppedGrapple && !player.IsGrounded())
+
+        //this if statement saved me and was found here
+        //https://answers.unity.com/questions/692892/linerenderer-appear-behind-sprites.html
+        if (gameObject.GetComponent<Renderer>().sortingLayerName != default && default != "")
+        {
+            //Debug.Log("Forcing sorting layer: "+sortingLayer);
+            gameObject.GetComponent<Renderer>().sortingLayerName = default;
+        }
+
+            if ((grappleStart && timer >= .2) || (playerAnimator.GetBool("isGrapple") && grappleStart ))
+        {
+            setTarget();
+            stoppedGrapple = false;
+            grapple = StartCoroutine(routine: AnimateRope(target.position));
+            grappleStart = false;
+        }
+
+        if (Input.GetMouseButtonDown(0) && stoppedGrapple && !player.IsGrounded() && !playerAnimator.GetBool("isFalling"))
         {
             Debug.Log("Starting Grapple");
-            stoppedGrapple = false;
-            line.enabled = true;
-            setTarget();
-            grapple = StartCoroutine(routine: AnimateRope(target.position));
+            playerAnimator.SetBool("isGrapple", true);
+            grappleStart = true;
+            timer = 0;
         }
 
         if ((Input.GetMouseButtonDown(1) || length > maxLength || emergencyStop || player.transform.position.y >= ropeEnd.y) && !stoppedGrapple)
@@ -63,11 +83,14 @@ public class Rope : MonoBehaviour
             StopCoroutine(grapple);
         }
 
+        timer += Time.deltaTime;
+
     }
 
     //IEnumerator runs in parallel with the update function
     private IEnumerator AnimateRope(Vector3 targetPos)
     {
+        line.enabled = true;
         line.positionCount = resolution;
 
         //calculates the angle we are shooting
@@ -136,7 +159,7 @@ public class Rope : MonoBehaviour
             //figure out the yPos of the rope by following along the sin wave
             float yPos = Mathf.Sin(f: (float)waveCount * currentPoint / resolution * 2 * Mathf.PI * reversePercent) * amplitude;
 
-            Vector2 pos = RotatePoint(new Vector2(x: xPos + transform.position.x, y: yPos + transform.position.y), pivot: transform.position, angle);
+            Vector2 pos = RotatePoint(new Vector2(x: xPos + transform.position.x, y: yPos + transform.position.y), pivot: transform.position,angle);
             line.SetPosition(currentPoint, pos);
         }
 
@@ -225,6 +248,7 @@ public class Rope : MonoBehaviour
         if (Physics2D.Raycast(transform.position, distanceVector.normalized))
         {
             RaycastHit2D _hit = Physics2D.Raycast(transform.position, distanceVector.normalized);
+            Debug.Log(_hit.transform.gameObject.layer);
             if (_hit.transform.gameObject.layer == 8)
             {
                 target.position = _hit.point;
@@ -247,7 +271,7 @@ public class Rope : MonoBehaviour
 
     private void grappleHitCheck()
     {
-        if (Physics2D.OverlapCircle(ropeEnd, 0.1f, groundLayers))
+        if (Physics2D.OverlapCircle(ropeEnd, 0.15f, groundLayers))
         {
             target.position = ropeEnd;
         }

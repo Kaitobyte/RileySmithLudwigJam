@@ -6,6 +6,7 @@ public class PlayerController : MonoBehaviour
 {
 
     [SerializeField] private float walkSpeed;
+    [SerializeField] private float grappleSpeed;
     [SerializeField] private float acceleration;
     [SerializeField] private float friction;
     [SerializeField] private Rigidbody2D playerRigidBody;
@@ -15,6 +16,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float airSpeed;
     [SerializeField] private SpringJoint2D playerSpringJoint;
     [SerializeField] private float scrollScale;
+    [SerializeField] private Animator playerAniamtor;
+    [SerializeField] private SpriteRenderer playerSprite;
 
     private float userInput;
     private bool isGrounded;
@@ -24,6 +27,8 @@ public class PlayerController : MonoBehaviour
     private float ropeLength = float.MaxValue;
     private Vector3 grappleLocation, playerVelocity;
     private LineRenderer grapple;
+    private float timer;
+    private bool airborne;
 
     // Start is called before the first frame update
     void Start()
@@ -49,6 +54,8 @@ public class PlayerController : MonoBehaviour
             Jump();
         }
 
+
+        timer += Time.deltaTime;
     }
 
     private void FixedUpdate()
@@ -57,42 +64,69 @@ public class PlayerController : MonoBehaviour
 
         if (IsGrounded())
         {
+            playerAniamtor.SetBool("isJumping", false);
+            playerAniamtor.SetBool("isGrapple", false);
+
+            airborne = false;
             if (playerRigidBody.velocity.x > friction)
             {
                 xMovement = playerRigidBody.velocity.x + (userInput * acceleration) - friction;
+                playerAniamtor.SetBool("isWalking", true);
+                playerSprite.flipX = false;
             }
             else if (playerRigidBody.velocity.x < -friction)
             {
                 xMovement = playerRigidBody.velocity.x + (userInput * acceleration) + friction;
+                playerAniamtor.SetBool("isWalking", true);
+                playerSprite.flipX = true;
             }
             else
             {
                 xMovement = userInput * acceleration;
+                playerAniamtor.SetBool("isWalking", false);
             }
 
         }
         else if (isGrappled)
         {
-            if (playerRigidBody.velocity.x > 0)
+            airborne = false;
+
+            if (playerRigidBody.velocity.x > airSpeed)
             {
-                xMovement = playerRigidBody.velocity.x + (userInput * acceleration * 2);
+                xMovement = playerRigidBody.velocity.x + (userInput * acceleration/3) - airSpeed;
+                playerSprite.flipX = false;
             }
-            else if (playerRigidBody.velocity.x < 0)
+            else if (playerRigidBody.velocity.x < -airSpeed)
             {
-                xMovement = playerRigidBody.velocity.x + (userInput * acceleration * 2);
-            }
-            else
+                xMovement = playerRigidBody.velocity.x + (userInput * acceleration/3) + airSpeed;
+                playerSprite.flipX = true;
+            } else
             {
-                xMovement = userInput * acceleration;
+                xMovement = userInput * acceleration / 2;
             }
+
+
         }
         else
         {
-            if (playerRigidBody.velocity.x > 0)
+            if (airborne)
+            {
+                if (timer >= 1.5f)
+                {
+                    playerAniamtor.SetBool("isFalling", true);
+                }
+            }
+            else
+            {
+                timer = 0;
+                airborne = true;
+            }
+            playerAniamtor.SetBool("isJumping", true);
+            if (playerRigidBody.velocity.x > airSpeed * 2)
             {
                 xMovement = playerRigidBody.velocity.x - airSpeed;
             }
-            else if (playerRigidBody.velocity.x < 0)
+            else if (playerRigidBody.velocity.x < airSpeed * 2)
             {
                 xMovement = playerRigidBody.velocity.x + airSpeed;
             }
@@ -100,11 +134,25 @@ public class PlayerController : MonoBehaviour
 
         if (xMovement > walkSpeed)
         {
-            xMovement = walkSpeed;
+            if (isGrappled)
+            {
+                xMovement = grappleSpeed;
+            }
+            else
+            {
+                xMovement = walkSpeed;
+            }
         }
         else if (xMovement < -walkSpeed)
         {
-            xMovement = -walkSpeed;
+            if (isGrappled)
+            {
+                xMovement = -grappleSpeed;
+            }
+            else
+            {
+                xMovement = -walkSpeed;
+            }
         }
 
         if (grapple.GetComponent<Rope>().GrappleEnded())
@@ -133,16 +181,6 @@ public class PlayerController : MonoBehaviour
 
         playerRigidBody.velocity = movement;
 
-        //float playerRopeDif = Vector2.Distance(a: transform.position, b: grappleLocation);
-
-        //if (ropeLength < playerRopeDif)
-        //{
-
-        //    playerRigidBody.MovePosition(new Vector3(Mathf.MoveTowards(transform.position.x, grappleLocation.x, acceleration * Time.deltaTime), 
-        //        Mathf.MoveTowards(transform.position.y, grappleLocation.y, acceleration * Time.deltaTime), 0));
-        //
-        // }
-
     }
 
     private void Jump()
@@ -154,7 +192,7 @@ public class PlayerController : MonoBehaviour
 
     public bool IsGrounded()
     {
-        Collider2D groundCheck = Physics2D.OverlapCircle(feet.position, 0.4f, groundLayers);
+        Collider2D groundCheck = Physics2D.OverlapCircle(feet.position, 0.15f, groundLayers);
 
         if (groundCheck != null)
         {

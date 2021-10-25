@@ -15,7 +15,7 @@ TagManager:
   - 
   - Ground
   - Player
-  - 
+  - Grapple
   - 
   - 
   - 
@@ -38,6 +38,9 @@ TagManager:
   - 
   - 
   m_SortingLayers:
+  - name: Grapple
+    uniqueID: 170038597
+    locked: 0
   - name: Default
     uniqueID: 0
     locked: 0
