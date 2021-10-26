@@ -93,16 +93,17 @@ public class PlayerController : MonoBehaviour
 
             if (playerRigidBody.velocity.x > airSpeed)
             {
-                xMovement = playerRigidBody.velocity.x + (userInput * acceleration/3) - airSpeed;
+                xMovement = playerRigidBody.velocity.x + (userInput * acceleration / 2) - airSpeed;
                 playerSprite.flipX = false;
             }
             else if (playerRigidBody.velocity.x < -airSpeed)
             {
-                xMovement = playerRigidBody.velocity.x + (userInput * acceleration/3) + airSpeed;
+                xMovement = playerRigidBody.velocity.x + (userInput * acceleration / 2) + airSpeed;
                 playerSprite.flipX = true;
-            } else
+            }
+            else
             {
-                xMovement = userInput * acceleration / 2;
+                xMovement = userInput * acceleration / 10;
             }
 
 
@@ -132,28 +133,29 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        if (xMovement > walkSpeed)
+        if (isGrappled)
         {
-            if (isGrappled)
+            if (xMovement > grappleSpeed)
             {
                 xMovement = grappleSpeed;
             }
-            else
-            {
-                xMovement = walkSpeed;
-            }
-        }
-        else if (xMovement < -walkSpeed)
-        {
-            if (isGrappled)
+            else if (xMovement < -grappleSpeed)
             {
                 xMovement = -grappleSpeed;
             }
-            else
+        }
+        else
+        {
+            if (xMovement > walkSpeed)
+            {
+                xMovement = walkSpeed;
+            }
+            else if (xMovement < -walkSpeed)
             {
                 xMovement = -walkSpeed;
             }
         }
+
 
         if (grapple.GetComponent<Rope>().GrappleEnded())
         {

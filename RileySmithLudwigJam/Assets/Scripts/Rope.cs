@@ -33,6 +33,7 @@ public class Rope : MonoBehaviour
     private bool emergencyStop;
     private bool grappleStart;
     private float timer;
+    private bool noGrapple;
 
     // Start is called before the first frame update
     void Start()
@@ -72,7 +73,8 @@ public class Rope : MonoBehaviour
             timer = 0;
         }
 
-        if ((Input.GetMouseButtonDown(1) || length > maxLength || emergencyStop || player.transform.position.y >= ropeEnd.y) && !stoppedGrapple)
+        if ((Input.GetMouseButtonDown(1) || length > maxLength || emergencyStop || player.transform.position.y >= ropeEnd.y || player.IsGrounded() || playerAnimator.GetBool("isFalling")) 
+            && !stoppedGrapple)
         {
             Debug.Log("Ending Grapple");
 
@@ -80,6 +82,7 @@ public class Rope : MonoBehaviour
             endOfRope = false;
             stoppedGrapple = true;
             emergencyStop = false;
+            noGrapple = false;
             StopCoroutine(grapple);
         }
 
@@ -118,7 +121,15 @@ public class Rope : MonoBehaviour
             //also add some grapple spam prevention - not done
         }
 
-        endOfRope = true;
+        if (noGrapple)
+        {
+            endOfRope = false;
+        }
+        else
+        {
+            endOfRope = true;
+
+        }
 
         while (!Input.GetMouseButtonDown(1))
         {
@@ -253,6 +264,10 @@ public class Rope : MonoBehaviour
             {
                 target.position = _hit.point;
 
+            } else if (_hit.transform.gameObject.layer == 10)
+            {
+                target.position = _hit.point;
+                noGrapple = true;
             }
             else
             {
@@ -260,6 +275,7 @@ public class Rope : MonoBehaviour
                 endOfRope = false;
                 stoppedGrapple = true;
                 emergencyStop = false;
+                noGrapple = false;
                 StopCoroutine(grapple);
             }
 
