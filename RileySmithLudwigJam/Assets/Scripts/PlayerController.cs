@@ -16,7 +16,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float airSpeed;
     [SerializeField] private SpringJoint2D playerSpringJoint;
     [SerializeField] private float scrollScale;
-    [SerializeField] private Animator playerAniamtor;
+    [SerializeField] private Animator playerAnimator;
     [SerializeField] private SpriteRenderer playerSprite;
 
     private float userInput;
@@ -29,6 +29,7 @@ public class PlayerController : MonoBehaviour
     private LineRenderer grapple;
     private float timer;
     private bool airborne;
+    private bool emergencyFix = false;
 
     // Start is called before the first frame update
     void Start()
@@ -51,6 +52,7 @@ public class PlayerController : MonoBehaviour
 
         if (Input.GetButtonDown("Jump") && IsGrounded() && !isGrappled)
         {
+            playerAnimator.SetBool("isStanding", true);
             Jump();
         }
 
@@ -64,31 +66,44 @@ public class PlayerController : MonoBehaviour
 
         if (IsGrounded())
         {
-            playerAniamtor.SetBool("isJumping", false);
-            playerAniamtor.SetBool("isGrapple", false);
+            playerAnimator.SetBool("isJumping", false);
+            playerAnimator.SetBool("isGrapple", false);
+            playerAnimator.SetBool("isFalling", false);
 
             airborne = false;
             if (playerRigidBody.velocity.x > friction)
             {
+                if (!playerAnimator.GetBool("isStanding"))
+                {
+                    playerAnimator.SetBool("isStanding", true);
+                }
                 xMovement = playerRigidBody.velocity.x + (userInput * acceleration) - friction;
-                playerAniamtor.SetBool("isWalking", true);
+                playerAnimator.SetBool("isWalking", true);
                 playerSprite.flipX = false;
             }
             else if (playerRigidBody.velocity.x < -friction)
             {
+                if (!playerAnimator.GetBool("isStanding"))
+                {
+                    playerAnimator.SetBool("isStanding", true);
+                }
                 xMovement = playerRigidBody.velocity.x + (userInput * acceleration) + friction;
-                playerAniamtor.SetBool("isWalking", true);
+                playerAnimator.SetBool("isWalking", true);
                 playerSprite.flipX = true;
             }
             else
             {
                 xMovement = userInput * acceleration;
-                playerAniamtor.SetBool("isWalking", false);
+                playerAnimator.SetBool("isWalking", false);
             }
+            emergencyFix = false;
 
         }
         else if (isGrappled)
         {
+            playerAnimator.SetBool("isFalling", false);
+            playerAnimator.SetBool("isJumping", false);
+            playerAnimator.SetBool("isStanding", true);
             airborne = false;
 
             if (playerRigidBody.velocity.x > airSpeed)
@@ -105,7 +120,7 @@ public class PlayerController : MonoBehaviour
             {
                 xMovement = userInput * acceleration / 10;
             }
-
+            emergencyFix = false;
 
         }
         else
@@ -114,7 +129,8 @@ public class PlayerController : MonoBehaviour
             {
                 if (timer >= 1.5f)
                 {
-                    playerAniamtor.SetBool("isFalling", true);
+                    playerAnimator.SetBool("isFalling", true);
+                    playerAnimator.SetBool("isStanding", false);
                 }
             }
             else
@@ -122,7 +138,7 @@ public class PlayerController : MonoBehaviour
                 timer = 0;
                 airborne = true;
             }
-            playerAniamtor.SetBool("isJumping", true);
+            playerAnimator.SetBool("isJumping", true);
             if (playerRigidBody.velocity.x > airSpeed * 2)
             {
                 xMovement = playerRigidBody.velocity.x - airSpeed;
@@ -178,6 +194,12 @@ public class PlayerController : MonoBehaviour
             playerSpringJoint.distance = ropeLength;
         }
 
+        if(playerAnimator.GetBool("isFalling") && (playerRigidBody.velocity.y < .1 && playerRigidBody.velocity.y > -.1) && !emergencyFix)
+        {
+            xMovement = 4;
+            playerRigidBody.velocity = new Vector2(xMovement, jumpForce / 2);
+            emergencyFix = true;
+        }
 
         Vector2 movement = new Vector2(xMovement, playerRigidBody.velocity.y);
 
