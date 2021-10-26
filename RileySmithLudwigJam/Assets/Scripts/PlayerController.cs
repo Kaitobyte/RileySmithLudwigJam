@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Audio;
 
 public class PlayerController : MonoBehaviour
 {
@@ -19,6 +20,16 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private Animator playerAnimator;
     [SerializeField] private SpriteRenderer playerSprite;
 
+    [SerializeField] private AudioClip footstepSound;
+    [SerializeField] private AudioClip jumpSound;
+    [SerializeField] private AudioClip grappleSound;
+    [SerializeField] private AudioClip hitTheGroundSound;
+    [SerializeField] private AudioClip fallingSound;
+
+    [SerializeField] private AudioSource audioSource;
+
+    [SerializeField] private float volume;
+
     private float userInput;
     private bool isGrounded;
     private bool isGrappled;
@@ -27,13 +38,24 @@ public class PlayerController : MonoBehaviour
     private float ropeLength = float.MaxValue;
     private Vector3 grappleLocation, playerVelocity;
     private LineRenderer grapple;
-    private float timer;
+    private float fallingTimer;
+    private float gameTime;
     private bool airborne;
     private bool emergencyFix = false;
+    private Vector2 originalPos = new Vector2(-6.058f, -1.195f);
+    private Vector2 savedPos;
 
     // Start is called before the first frame update
     void Start()
     {
+        if (PlayerPrefs.HasKey("hasSaved"))
+        {
+            savedPos = new Vector2(PlayerPrefs.GetFloat("savedX"), PlayerPrefs.GetFloat("savedY"));
+            this.transform.position = savedPos;
+        } else
+        {
+            this.transform.position = originalPos;
+        }
         playerSpringJoint.enabled = false;
         grapple = GetComponentInChildren<LineRenderer>();
     }
@@ -53,11 +75,17 @@ public class PlayerController : MonoBehaviour
         if (Input.GetButtonDown("Jump") && IsGrounded() && !isGrappled)
         {
             playerAnimator.SetBool("isStanding", true);
+            audioSource.PlayOneShot(jumpSound, volume);
             Jump();
         }
 
+        PlayerPrefs.SetFloat("savedX", this.transform.position.x);
+        PlayerPrefs.SetFloat("savedY", this.transform.position.y);
+        PlayerPrefs.SetInt("hasSaved", 1);
 
-        timer += Time.deltaTime;
+
+        fallingTimer += Time.deltaTime;
+        gameTime += Time.deltaTime;
     }
 
     private void FixedUpdate()
@@ -70,26 +98,43 @@ public class PlayerController : MonoBehaviour
             playerAnimator.SetBool("isGrapple", false);
             playerAnimator.SetBool("isFalling", false);
 
+            if (airborne && fallingTimer > 1.5)
+            {
+                audioSource.PlayOneShot(hitTheGroundSound, volume);
+            }
+
             airborne = false;
             if (playerRigidBody.velocity.x > friction)
             {
                 if (!playerAnimator.GetBool("isStanding"))
                 {
                     playerAnimator.SetBool("isStanding", true);
+                    playerRigidBody.transform.position.Set(playerRigidBody.transform.position.x, playerRigidBody.transform.position.y + 5,
+                        playerRigidBody.transform.position.z);
                 }
                 xMovement = playerRigidBody.velocity.x + (userInput * acceleration) - friction;
                 playerAnimator.SetBool("isWalking", true);
                 playerSprite.flipX = false;
+                if (!audioSource.isPlaying && Time.time % .3 < .1)
+                {
+                    audioSource.PlayOneShot(footstepSound, volume);
+                }
             }
             else if (playerRigidBody.velocity.x < -friction)
             {
                 if (!playerAnimator.GetBool("isStanding"))
                 {
                     playerAnimator.SetBool("isStanding", true);
+                    playerRigidBody.transform.position.Set(playerRigidBody.transform.position.x, playerRigidBody.transform.position.y + 5,
+    playerRigidBody.transform.position.z);
                 }
                 xMovement = playerRigidBody.velocity.x + (userInput * acceleration) + friction;
                 playerAnimator.SetBool("isWalking", true);
                 playerSprite.flipX = true;
+                if (!audioSource.isPlaying && Time.time % .3 < .1)
+                {
+                    audioSource.PlayOneShot(footstepSound, volume);
+                }
             }
             else
             {
@@ -127,15 +172,16 @@ public class PlayerController : MonoBehaviour
         {
             if (airborne)
             {
-                if (timer >= 1.5f)
+                if (fallingTimer >= 1.5f)
                 {
+                    audioSource.PlayOneShot(fallingSound, volume);
                     playerAnimator.SetBool("isFalling", true);
                     playerAnimator.SetBool("isStanding", false);
                 }
             }
             else
             {
-                timer = 0;
+                fallingTimer = 0;
                 airborne = true;
             }
             playerAnimator.SetBool("isJumping", true);
@@ -177,6 +223,7 @@ public class PlayerController : MonoBehaviour
         {
             if (!toggleRopeEnd)
             {
+                audioSource.PlayOneShot(grappleSound, volume);
                 ropeLength = grapple.GetComponent<Rope>().RopeLength();
                 grappleLocation = grapple.GetComponent<Rope>().GrappleLocation();
                 toggleRopeEnd = true;
@@ -224,6 +271,11 @@ public class PlayerController : MonoBehaviour
         }
 
         return false;
+    }
+
+    public float getGameTime()
+    {
+        return gameTime;
     }
 
 }
