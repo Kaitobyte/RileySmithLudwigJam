@@ -51,6 +51,7 @@ public class PlayerController : MonoBehaviour
         if (PlayerPrefs.HasKey("hasSaved"))
         {
             savedPos = new Vector2(PlayerPrefs.GetFloat("savedX"), PlayerPrefs.GetFloat("savedY"));
+            gameTime = PlayerPrefs.GetFloat("gameTime");
             this.transform.position = savedPos;
         } else
         {
@@ -82,7 +83,7 @@ public class PlayerController : MonoBehaviour
         PlayerPrefs.SetFloat("savedX", this.transform.position.x);
         PlayerPrefs.SetFloat("savedY", this.transform.position.y);
         PlayerPrefs.SetInt("hasSaved", 1);
-
+        PlayerPrefs.SetFloat("gameTime", gameTime);
 
         fallingTimer += Time.deltaTime;
         gameTime += Time.deltaTime;
@@ -163,7 +164,7 @@ public class PlayerController : MonoBehaviour
             }
             else
             {
-                xMovement = userInput * acceleration / 10;
+                xMovement = userInput * acceleration;
             }
             emergencyFix = false;
 
